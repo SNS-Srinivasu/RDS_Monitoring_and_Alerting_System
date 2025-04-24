@@ -1,0 +1,90 @@
+
+RDS Monitoring and Alerting System - Project Documentation
+===========================================================
+
+Objective:
+----------
+Monitor Amazon RDS instance performance (CPU utilization, connections, and storage)
+and trigger alerts using Amazon CloudWatch and SNS when thresholds are breached.
+
+AWS Services Used:
+------------------
+- Amazon RDS
+- Amazon CloudWatch
+- Amazon SNS
+
+Steps:
+------
+
+Step 1: Create an RDS MySQL Instance
+------------------------------------
+1. Go to RDS > Create Database
+2. Choose:
+   - Standard Create
+   - Engine: MySQL
+   - Version: 8.x (Free Tier eligible)
+   - Template: Free Tier
+   - DB Instance Class: db.t3.micro
+   - Storage: 20 GiB General Purpose (SSD)
+3. Enable Public Access if needed
+4. Choose/Create VPC security group that allows inbound traffic on port 3306
+5. Set Master username and password
+6. Launch the RDS instance and wait for it to be available
+
+Step 2: Enable Enhanced Monitoring
+----------------------------------
+1. Go to RDS > Databases > Select your DB
+2. Click "Modify"
+3. Scroll down to "Monitoring"
+4. Enable Enhanced Monitoring
+5. Set granularity (1 or 5 seconds)
+6. Monitoring Role: `rds-monitoring-role`
+   - If not available, create it:
+     a. Go to IAM > Roles > Create role
+     b. Select service: RDS
+     c. Use case: RDS - Enhanced Monitoring
+     d. Attach policy: AmazonRDSEnhancedMonitoringRole
+     e. Name: rds-monitoring-role
+7. Click "Continue" > "Apply immediately"
+
+Step 3: Create an SNS Topic
+---------------------------
+1. Go to SNS > Topics > Create topic
+2. Type: Standard
+3. Name: rds-alert-topic
+4. Create subscription:
+   - Protocol: Email
+   - Endpoint: your-email@example.com
+5. Confirm the email subscription from your inbox
+
+Step 4: Create CloudWatch Alarms
+--------------------------------
+1. Go to CloudWatch > Alarms > Create Alarm
+2. Choose metric:
+   - RDS > Per-Database Metrics > CPUUtilization
+3. Condition:
+   - Threshold type: Static
+   - Whenever CPUUtilization is > 80%
+   - Datapoints to alarm: 2 out of 3
+   - Treat missing data: as missing
+4. Notification:
+   - Send notification to: rds-alert-topic
+5. Name the alarm: High-CPU-Utilization
+
+Step 5: Simulate High CPU Usage
+-------------------------------
+Connect to your RDS MySQL instance using:
+$ mysql -h <RDS-ENDPOINT> -u <username> -p
+
+Run the following SQL query to simulate high CPU usage:
+> SELECT BENCHMARK(500000000, SHA2('test', 512));
+
+This should raise the CPU above 80% temporarily and trigger the CloudWatch alarm.
+
+Step 6: Monitor and Confirm Alarm
+---------------------------------
+1. Go to CloudWatch > Alarms
+2. Verify the alarm status changes to ALARM
+3. Check your email for an SNS alert notification
+
+
